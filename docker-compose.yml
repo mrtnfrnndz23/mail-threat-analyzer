@@ -1,8 +1,42 @@
-version: '3'
-
 services:
-  mailhog:
-    image: mailhog/mailhog
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: mail-threat-analyzer-api
+    env_file:
+      - .env
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "8000:8000"
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  mail_worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: mail-threat-analyzer-worker
+    env_file:
+      - .env
+    volumes:
+      - worker_data:/app/data
+    command: python -m mail_processor.auto_responder
+    restart: unless-stopped
+
+# Se usara un SMTP real (externo al compose).
+# Configuracion esperada via variables de entorno:
+# SMTP_HOST=smtp.tu-proveedor.com
+# SMTP_PORT=465
+# SMTP_USER=tu_usuario
+# SMTP_PASSWORD=tu_password
+# SMTP_USE_SSL=true
+# IMAP_USER=tu_usuario
+# IMAP_PASSWORD=tu_password
+# IMAP_FOLDER=INBOX
+# IMAP_SEARCH_CRITERIA=UNSEEN
+# MAIL_POLL_INTERVAL_SECONDS=30
+# WORKER_STATE_FILE=/app/data/processed_ids.json
+# MAX_PROCESSED_IDS=5000
+
+volumes:
+  worker_data:
